@@ -16,8 +16,12 @@
 
 namespace {
 
+#ifdef AFL_FUZZING
+
 geometrize::ImageRunnerOptions generateOptions()
 {
+    geometrize::ImageRunnerOptions options;
+
     /*
         geometrize::ShapeTypes shapeTypes = geometrize::ShapeTypes::ELLIPSE; ///< The shape types that the image runner shall use.
         std::uint8_t alpha = 128U; ///< The alpha/opacity of the shapes (0-255).
@@ -29,6 +33,13 @@ geometrize::ImageRunnerOptions generateOptions()
 
     return geometrize::ImageRunnerOptions{};
 }
+
+geometrize::Bitmap generateRandomBitmap()
+{
+    return geometrize::Bitmap(32, 32, geometrize::rgba{12, 12, 12, 12});
+}
+
+#endif
 
 geometrize::Bitmap generateBitmap()
 {
@@ -62,8 +73,11 @@ std::string shapeNameForType(const geometrize::ShapeTypes type) // Helper functi
 
 int main(int argc, char** argv)
 {
+#ifdef AFL_FUZZING
 	const geometrize::Bitmap bitmap{generateBitmap()};
     const geometrize::ImageRunnerOptions options{generateOptions()};
+#endif
+
     geometrize::ImageRunner runner{bitmap};
 
     const std::size_t totalSteps{100};
