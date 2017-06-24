@@ -15,9 +15,9 @@ before_install:
   - ./travis_update_geometrize_submodule.sh
 
 install:
-  - 
+  - sudo apt-get install -y qt5-default qttools5-dev-tools
 
-# Build the fuzzer program - TODO
+# Build the program to fuzz
 script:
-  - pushd fuzz
-  - popd
+  - qmake geometrize-lib-fuzzing.pro
+  - make
