@@ -14,6 +14,15 @@ before_install:
   - chmod +x ./travis_update_geometrize_submodule.sh
   - ./travis_update_geometrize_submodule.sh
 
+# Install g++
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - gcc-5
+      - g++-5
+
 install:
   - sudo apt-get install -y qt5-default qttools5-dev-tools
 
