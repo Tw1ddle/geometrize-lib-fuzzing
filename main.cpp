@@ -6,7 +6,12 @@
 #include <vector>
 #include <utility>
 
-#include "lib/libbmpread/bmpread.h"
+#include <experimental/filesystem>
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "lib/stb/stb_image.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "lib/stb/stb_image_write.h"
 
 #include "geometrize/shaperesult.h"
 #include "geometrize/bitmap/bitmap.h"
@@ -18,6 +23,8 @@
 
 namespace {
 
+// Geometrizes the bitmap using the given options and steps
+void run(const geometrize::Bitmap bitmap, const geometrize::ImageRunnerOptions options, const std::size_t totalSteps);
 // Load a Windows bitmap (bmp) from a file
 geometrize::Bitmap loadBitmap(const std::string& filePath);
 // Generate randomized image runner options
@@ -25,32 +32,23 @@ geometrize::ImageRunnerOptions generateRandomOptions();
 
 }
 
-int main(int argc, char *argv[])
+int main(int /*argc*/, char /**argv[]*/)
 {
-    if(argc != 2) {
-        assert(0 && "No input bitmap specified");
-        return 1;
-    }
-    const geometrize::Bitmap bitmap{loadBitmap(argv[1])};
-    const geometrize::ImageRunnerOptions options{generateRandomOptions()};
-
-    geometrize::ImageRunner runner{bitmap};
-    if(bitmap.getWidth() == 0 || bitmap.getHeight() == 0 || bitmap.getDataRef().size() == 0) {
-        assert(0 && "Loaded empty bitmap");
-        return 2;
-    }
-
-    const std::size_t totalSteps = []() {
-        std::random_device rd;
-        std::uniform_int_distribution<std::size_t> dist{0, 512};
-        return static_cast<std::size_t>(dist(rd));
-    }();
-
-    for(std::size_t steps = 0; steps < totalSteps; steps++) {
-        const std::vector<geometrize::ShapeResult> shapes{runner.step(options)};
-        for(std::size_t i = 0; i < shapes.size(); i++) {
-            std::cout << "Added shape " << steps + i << ". Type: " << shapes[i].shape->getType() << ". Score: " << shapes[i].score << "\n";
+    for(auto& p : std::experimental::filesystem::directory_iterator("../geometrize-lib-fuzzing/input_data")) {
+        const geometrize::Bitmap bitmap{loadBitmap(std::experimental::filesystem::canonical(p.path()).string())};
+        if(bitmap.getWidth() == 0 || bitmap.getHeight() == 0 || bitmap.getDataRef().size() == 0) {
+            assert(0 && "Loaded empty bitmap");
+            return 2;
         }
+
+        const geometrize::ImageRunnerOptions options{generateRandomOptions()};
+        const std::size_t totalSteps = []() {
+            std::random_device rd;
+            std::uniform_int_distribution<std::size_t> dist{0, 300};
+            return static_cast<std::size_t>(dist(rd));
+        }();
+
+        run(bitmap, options, totalSteps);
     }
 
     return 0;
@@ -58,14 +56,32 @@ int main(int argc, char *argv[])
 
 namespace {
 
-geometrize::Bitmap loadBitmap(const std::string& filePath)
+void run(const geometrize::Bitmap bitmap, const geometrize::ImageRunnerOptions options, const std::size_t totalSteps)
 {
-    bmpread_t bitmap;
-    if(!bmpread(filePath.c_str(), 0, &bitmap)) {
-        return geometrize::Bitmap(0, 0, geometrize::rgba{0, 0, 0, 0}); // Failed to read, return empty
+    geometrize::ImageRunner runner{bitmap};
+    for(std::size_t steps = 0; steps < totalSteps; steps++) {
+        const std::vector<geometrize::ShapeResult> shapes{runner.step(options)};
+        for(std::size_t i = 0; i < shapes.size(); i++) {
+            std::cout << "Added shape " << steps + i << ". Type: " << shapes[i].shape->getType() << ". Score: " << shapes[i].score << "\n";
+        }
     }
-    std::vector<std::uint8_t> data(bitmap.rgb_data, bitmap.rgb_data + (bitmap.width * bitmap.height * 3));
-    return geometrize::Bitmap(bitmap.width, bitmap.height, data);
+}
+
+geometrize::Bitmap loadBitmap(const std::string& filePath) // Helper function to read an image file to RGBA8888 pixel data
+{
+    const char* path{filePath.c_str()};
+    std::int32_t w = 0;
+    std::int32_t h = 0;
+    std::int32_t n = 0;
+    std::uint8_t* dataPtr{stbi_load(path, &w, &h, &n, 4)};
+    if(dataPtr == nullptr) {
+        return geometrize::Bitmap(0, 0, geometrize::rgba{0, 0, 0, 0});
+    }
+    const std::vector<std::uint8_t> data{dataPtr, dataPtr + (w * h * 4)};
+    delete dataPtr;
+
+    const geometrize::Bitmap bitmap(w, h, data);
+    return bitmap;
 }
 
 geometrize::ImageRunnerOptions generateRandomOptions()
@@ -75,11 +91,12 @@ geometrize::ImageRunnerOptions generateRandomOptions()
     std::random_device rd;
 
     options.shapeTypes = [&rd]() {
-        return geometrize::ShapeTypes::ELLIPSE;
+        std::uniform_int_distribution<std::size_t> dist{0, geometrize::allShapes.size() - 1};
+        return geometrize::allShapes[dist(rd)];
     }();
     options.alpha = [&rd]() {
         std::uniform_int_distribution<std::uint32_t> dist{0, 255};
-        return static_cast<std::uint8_t>(dist(rd) & 0xFF);
+        return static_cast<std::uint8_t>(dist(rd));
     }();
     options.shapeCount = [&rd]() {
         std::uniform_int_distribution<std::uint32_t> dist{1, 200};
@@ -95,7 +112,7 @@ geometrize::ImageRunnerOptions generateRandomOptions()
     }();
     options.maxThreads = [&rd]() {
         std::uniform_int_distribution<std::uint32_t> dist{0, 16};
-        return static_cast<std::uint8_t>(dist(rd) & 0x10);
+        return static_cast<std::uint8_t>(dist(rd));
     }();
 
     return options;

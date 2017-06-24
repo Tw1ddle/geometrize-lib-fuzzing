@@ -2,7 +2,7 @@ include($$PWD/lib/geometrize/geometrize/geometrize.pri)
 
 CONFIG += warn_on console
 
-HEADERS += lib/libbmpread/bmpread.h
+HEADERS += lib/stb/stb_image.h \
+           lib/stb/stb_image_write.h
 
-SOURCES += lib/libbmpread/bmpread.c \
-           main.cpp
+SOURCES += main.cpp
