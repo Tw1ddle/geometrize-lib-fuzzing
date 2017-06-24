@@ -1,10 +1,12 @@
+#include <cassert>
 #include <cstdint>
 #include <iostream>
+#include <random>
 #include <string>
 #include <vector>
 #include <utility>
 
-#include "libbmpread/bmpread.h"
+#include "lib/libbmpread/bmpread.h"
 
 #include "geometrize/shaperesult.h"
 #include "geometrize/bitmap/bitmap.h"
@@ -16,77 +18,87 @@
 
 namespace {
 
-#ifdef AFL_FUZZING
+// Load a Windows bitmap (bmp) from a file
+geometrize::Bitmap loadBitmap(const std::string& filePath);
+// Generate randomized image runner options
+geometrize::ImageRunnerOptions generateRandomOptions();
 
-geometrize::ImageRunnerOptions generateOptions()
-{
-    geometrize::ImageRunnerOptions options;
-
-    /*
-        geometrize::ShapeTypes shapeTypes = geometrize::ShapeTypes::ELLIPSE; ///< The shape types that the image runner shall use.
-        std::uint8_t alpha = 128U; ///< The alpha/opacity of the shapes (0-255).
-        std::uint32_t shapeCount = 50U; ///< The number of candidate shapes that will be tried per model step.
-        std::uint32_t maxShapeMutations = 100U; ///< The maximum number of times each candidate shape will be modified to attempt to find a better fit.
-        std::uint32_t seed = 0U; ///< The seed for the random number generators used by the image runner.
-        std::uint32_t maxThreads = 0; ///< The maximum number of separate threads for the implementation to use. 0 lets the implementation choose a reasonable number.
-    */
-
-    return geometrize::ImageRunnerOptions{};
 }
 
-geometrize::Bitmap generateRandomBitmap()
+int main(int argc, char *argv[])
 {
-    return geometrize::Bitmap(32, 32, geometrize::rgba{12, 12, 12, 12});
-}
-
-#endif
-
-geometrize::Bitmap generateBitmap()
-{
-	return geometrize::Bitmap(32, 32, geometrize::rgba{12, 12, 12, 12});
-}
-
-// Helper function to convert a string to a Geometrize shape type
-geometrize::ShapeTypes shapeTypeForName(const std::string& shapeName)
-{
-    for(const std::pair<geometrize::ShapeTypes, std::string>& p : geometrize::shapeTypeNames) {
-        if(p.second == shapeName) {
-            return p.first;
-        }
+    if(argc != 2) {
+        assert(0 && "No input bitmap specified");
+        return 1;
     }
-    std::cout << "Bad shape type name, defaulting to ellipses \n";
-    return geometrize::ELLIPSE;
-}
-
-// Helper function to convert a shape type to a human-readable string
-std::string shapeNameForType(const geometrize::ShapeTypes type) // Helper function to convert a shape type to a human-readable string
-{
-    for(const std::pair<geometrize::ShapeTypes, std::string>& p : geometrize::shapeTypeNames) {
-        if(p.first == type) {
-            return p.second;
-        }
-    }
-    return "unknown";
-}
-
-}
-
-int main(int argc, char** argv)
-{
-#ifdef AFL_FUZZING
-	const geometrize::Bitmap bitmap{generateBitmap()};
-    const geometrize::ImageRunnerOptions options{generateOptions()};
-#endif
+    const geometrize::Bitmap bitmap{loadBitmap(argv[1])};
+    const geometrize::ImageRunnerOptions options{generateRandomOptions()};
 
     geometrize::ImageRunner runner{bitmap};
+    if(bitmap.getWidth() == 0 || bitmap.getHeight() == 0 || bitmap.getDataRef().size() == 0) {
+        assert(0 && "Loaded empty bitmap");
+        return 2;
+    }
 
-    const std::size_t totalSteps{100};
+    const std::size_t totalSteps = []() {
+        std::random_device rd;
+        std::uniform_int_distribution<std::size_t> dist{0, 512};
+        return static_cast<std::size_t>(dist(rd));
+    }();
+
     for(std::size_t steps = 0; steps < totalSteps; steps++) {
         const std::vector<geometrize::ShapeResult> shapes{runner.step(options)};
         for(std::size_t i = 0; i < shapes.size(); i++) {
-            std::cout << "Added shape " << steps + i << ". Type: " << shapeNameForType(shapes[i].shape->getType()) << " . Score: " << shapes[i].score << "\n";
+            std::cout << "Added shape " << steps + i << ". Type: " << shapes[i].shape->getType() << ". Score: " << shapes[i].score << "\n";
         }
     }
-	
-	return 0;
+
+    return 0;
+}
+
+namespace {
+
+geometrize::Bitmap loadBitmap(const std::string& filePath)
+{
+    bmpread_t bitmap;
+    if(!bmpread(filePath.c_str(), 0, &bitmap)) {
+        return geometrize::Bitmap(0, 0, geometrize::rgba{0, 0, 0, 0}); // Failed to read, return empty
+    }
+    std::vector<std::uint8_t> data(bitmap.rgb_data, bitmap.rgb_data + (bitmap.width * bitmap.height * 3));
+    return geometrize::Bitmap(bitmap.width, bitmap.height, data);
+}
+
+geometrize::ImageRunnerOptions generateRandomOptions()
+{
+    geometrize::ImageRunnerOptions options;
+
+    std::random_device rd;
+
+    options.shapeTypes = [&rd]() {
+        return geometrize::ShapeTypes::ELLIPSE;
+    }();
+    options.alpha = [&rd]() {
+        std::uniform_int_distribution<std::uint32_t> dist{0, 255};
+        return static_cast<std::uint8_t>(dist(rd) & 0xFF);
+    }();
+    options.shapeCount = [&rd]() {
+        std::uniform_int_distribution<std::uint32_t> dist{1, 200};
+        return dist(rd);
+    }();
+    options.maxShapeMutations = [&rd]() {
+        std::uniform_int_distribution<std::uint32_t> dist{1, 200};
+        return dist(rd);
+    }();
+    options.seed = [&rd]() {
+        std::uniform_int_distribution<std::uint32_t> dist{0, UINT_MAX};
+        return dist(rd);
+    }();
+    options.maxThreads = [&rd]() {
+        std::uniform_int_distribution<std::uint32_t> dist{0, 16};
+        return static_cast<std::uint8_t>(dist(rd) & 0x10);
+    }();
+
+    return options;
+}
+
 }
