@@ -1,3 +1,6 @@
 [submodule "geometrize"]
 	path = geometrize
 	url = https://github.com/Tw1ddle/geometrize-lib
+[submodule "libbmpread"]
+	path = libbmpread
+	url = https://github.com/Tw1ddle/libbmpread
