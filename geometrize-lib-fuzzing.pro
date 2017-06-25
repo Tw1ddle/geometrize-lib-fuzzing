@@ -1,6 +1,9 @@
-include($$PWD/lib/geometrize/geometrize/geometrize.pri)
+TEMPLATE = app
+CONFIG += console c++11 warn_on
+CONFIG -= app_bundle
+CONFIG -= qt
 
-CONFIG += warn_on console
+include($$PWD/lib/geometrize/geometrize/geometrize.pri)
 
 HEADERS += lib/stb/stb_image.h \
            lib/stb/stb_image_write.h

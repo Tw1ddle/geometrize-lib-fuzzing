@@ -23,24 +23,33 @@
 namespace {
 
 // Geometrizes a bitmap using the given number of steps, returns the resulting geometrized bitmap
-geometrize::Bitmap run(const geometrize::Bitmap bitmap, const std::size_t totalSteps);
+geometrize::Bitmap geometrizeImage(const geometrize::Bitmap bitmap, const std::size_t totalSteps);
 // Load a Windows bitmap (bmp) from a file
 geometrize::Bitmap loadBitmap(const std::string& filePath);
 // Generate randomized image runner options
 geometrize::ImageRunnerOptions generateRandomOptions();
 // Helper function to write a PNG file
 bool writeImage(const geometrize::Bitmap& bitmap, const std::string& filePath);
-
+// Runs the test program. Throws various exceptions to signal failure.
+void run();
 }
 
 int main(int /*argc*/, char /**argv[]*/)
+{
+    run();
+    return 0;
+}
+
+namespace {
+
+void run()
 {
     for(auto& p : std::experimental::filesystem::directory_iterator("../geometrize-lib-fuzzing/input_data")) {
         const std::string filepath{std::experimental::filesystem::canonical(p.path()).string()};
         const geometrize::Bitmap bitmap{loadBitmap(filepath)};
         if(bitmap.getWidth() == 0 || bitmap.getHeight() == 0 || bitmap.getDataRef().size() == 0) {
             assert(0 && "Loaded empty bitmap");
-            return 2;
+            return;
         }
 
         const std::size_t totalSteps = []() {
@@ -69,16 +78,12 @@ int main(int /*argc*/, char /**argv[]*/)
             return subject;
         };
 
-        const geometrize::Bitmap result{run(bitmap, totalSteps)};
+        const geometrize::Bitmap result{geometrizeImage(bitmap, totalSteps)};
         writeImage(result, replaceString(removeExtension(filepath) + "_result.png", "input_data", "output_data"));
     }
-
-    return 0;
 }
 
-namespace {
-
-geometrize::Bitmap run(const geometrize::Bitmap bitmap, const std::size_t totalSteps)
+geometrize::Bitmap geometrizeImage(const geometrize::Bitmap bitmap, const std::size_t totalSteps)
 {
     geometrize::ImageRunner runner{bitmap};
     for(std::size_t steps = 0; steps < totalSteps; steps++) {
@@ -144,7 +149,7 @@ geometrize::ImageRunnerOptions generateRandomOptions()
         return dist(rd);
     }();
     options.maxThreads = [&rd]() {
-        std::uniform_int_distribution<std::uint32_t> dist{0, 16};
+        std::uniform_int_distribution<std::uint32_t> dist{0, 16}; // Note selecting 0 threads should let the implementation choose
         return static_cast<std::uint8_t>(dist(rd));
     }();
 
