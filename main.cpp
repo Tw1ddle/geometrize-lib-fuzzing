@@ -37,7 +37,7 @@ bool writeImage(const geometrize::Bitmap& bitmap, const std::string& filePath);
 void run();
 }
 
-int main(int /*argc*/, char /**argv[]*/)
+int main(int /*argc*/, char** /*argv*/)
 {
     try {
         run();
