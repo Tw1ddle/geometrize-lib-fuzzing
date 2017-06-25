@@ -3,6 +3,8 @@ CONFIG += console c++14 warn_on
 CONFIG -= app_bundle
 CONFIG -= qt
 
+QMAKE_CXXFLAGS += -std=c++14
+
 include($$PWD/lib/geometrize/geometrize/geometrize.pri)
 
 HEADERS += lib/stb/stb_image.h \
