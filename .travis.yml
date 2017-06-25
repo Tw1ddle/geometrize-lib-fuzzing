@@ -14,19 +14,22 @@ before_install:
   - chmod +x ./travis_update_geometrize_submodule.sh
   - ./travis_update_geometrize_submodule.sh
 
-# Install g++
+# Install recent g++
 addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
     packages:
-      - gcc-5
-      - g++-5
+      - gcc-6
+      - g++-6
 
 install:
   - sudo apt-get install -y qt5-default qttools5-dev-tools
 
 # Build the program to fuzz
 script:
+  # Link gcc-6 and g++-6 to their standard commands
+  - sudo ln -s /usr/bin/gcc-6 /usr/local/bin/gcc
+  - sudo ln -s /usr/bin/g++-6 /usr/local/bin/g++
   - qmake geometrize-lib-fuzzing.pro
   - make
