@@ -86,7 +86,9 @@ void run()
 
         const geometrize::Bitmap result{geometrizeImage(bitmap, totalSteps)};
 
-        const std::string destinationPath{replaceString(removeExtension(filepath) + "_result.png", "input_data", "output_data")};
+        std::string trimmedPath{removeExtension(filepath)};
+        trimmedPath.append("_result.png");
+        const std::string destinationPath{replaceString(trimmedPath, "input_data", "output_data")};
         if(!writeImage(result, destinationPath)) {
             throw std::runtime_error("Failed to write image to: " + destinationPath);
         }
