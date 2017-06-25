@@ -23,6 +23,8 @@
 
 namespace {
 
+const std::string inputDataDirectory{"../geometrize-lib-fuzzing/input_data"};
+
 // Geometrizes a bitmap using the given number of steps, returns the resulting geometrized bitmap
 geometrize::Bitmap geometrizeImage(const geometrize::Bitmap bitmap, const std::size_t totalSteps);
 // Load a Windows bitmap (bmp) from a file
@@ -50,7 +52,7 @@ namespace {
 
 void run()
 {
-    for(auto& p : std::experimental::filesystem::directory_iterator("../geometrize-lib-fuzzing/input_data")) {
+    for(auto& p : std::experimental::filesystem::directory_iterator(inputDataDirectory)) {
         const std::string filepath{std::experimental::filesystem::canonical(p.path()).string()};
         const geometrize::Bitmap bitmap{loadBitmap(filepath)};
         if(bitmap.getWidth() == 0 || bitmap.getHeight() == 0 || bitmap.getDataRef().size() == 0) {
