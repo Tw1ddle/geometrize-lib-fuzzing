@@ -9,27 +9,29 @@ env:
   global:
     - secure: D8yS8J76Kwq0V3OUIRfvNdKVvJGnLwJsm0Pf34wwfuz7ilLRcmv24pViIc7VcfDyLj5COAM60Ri53IfAeTfFD5xVdCgLjZJVm3BVv76V54rMmI/X3YJommuIBMB36wh0ETC/Htr71niSS5Nsp1Nw/5YV4KtQGK7ClUEsMZJgjn+vTfB4KKAwy87jcOzZMIvQUaQJCwhgm1YjBhcv7Gv4Bk/3gvnHN9bLc2ubC66Cg93MNXCnctwVliTtMAGOisOI2t0zGPPoBZioBDcfnF3fd1zgfqH2VQZsuOrWrdoyXXuYPzFCfYrSOnI2JSqDKeDqxzKlrin/8nKQRPuFesrSCpsXCT6VktVtc7FRt56AqNxD0JDBcNWDhCXafh9EwCwKqVIuhFV7hvDM6C3EvaN92f4arBf/+7B+VujuavQhNn4cwcT6R+Btpb0QtymJcZFADwU/iXj3d+rR8IOVpgVJ9yZ/RSiutwNMlg1lcgH/Lrj9ECB3mA1EgSq5PYSm5Z+CtIpuVVGqeebvq/DOIUow9qD1/UTTvhb6c7HSYYE5mMwEQhr3sE1HtB/YvZNFyQ2E5WO2SdxLVtnKmB1AOqSP+L/ijIQbahJxUB8VupDdb4962V32jVhphpSJv3ZKThDPu66ZHmXnjSDhHS42N4KF3yDUpHQBt43FUaS0t2Ktjgc=
 
+matrix:
+  include:
+    # Use recent g++
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-6
+      env:
+        - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
+
 # Get the latest version of the Geometrize library submodule, and push it to the remote (if necessary)
 before_install:
   - chmod +x ./travis_update_geometrize_submodule.sh
   - ./travis_update_geometrize_submodule.sh
-
-# Install recent g++
-addons:
-  apt:
-    sources:
-      - ubuntu-toolchain-r-test
-    packages:
-      - gcc-6
-      - g++-6
+  - eval "${MATRIX_EVAL}"
 
 install:
   - sudo apt-get install -y qt5-default qttools5-dev-tools
 
 # Build the program to fuzz
 script:
-  # Link gcc-6 and g++-6 to their standard commands
-  - sudo ln -s /usr/bin/gcc-6 /usr/local/bin/gcc
-  - sudo ln -s /usr/bin/g++-6 /usr/local/bin/g++
   - qmake geometrize-lib-fuzzing.pro
   - make
