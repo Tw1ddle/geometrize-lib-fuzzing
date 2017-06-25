@@ -4,7 +4,6 @@
 #include <random>
 #include <string>
 #include <vector>
-#include <utility>
 
 #include <experimental/filesystem>
 
@@ -92,6 +91,7 @@ geometrize::Bitmap run(const geometrize::Bitmap bitmap, const std::size_t totalS
         }
 
         std::cout << "Options were: Alpha: " << static_cast<std::int32_t>(options.alpha) << ", "
+                  << "Max shapes: " << options.shapeCount << ", "
                   << "Max mutations: " << options.maxShapeMutations << ", "
                   << "Shape count: " << options.shapeCount << ", "
                   << "Random seed: " << options.seed << ", "
