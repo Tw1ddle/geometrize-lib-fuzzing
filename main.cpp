@@ -23,32 +23,55 @@
 
 namespace {
 
-// Geometrizes the bitmap using the given options and steps
-void run(const geometrize::Bitmap bitmap, const geometrize::ImageRunnerOptions options, const std::size_t totalSteps);
+// Geometrizes a bitmap using the given number of steps, returns the resulting geometrized bitmap
+geometrize::Bitmap run(const geometrize::Bitmap bitmap, const std::size_t totalSteps);
 // Load a Windows bitmap (bmp) from a file
 geometrize::Bitmap loadBitmap(const std::string& filePath);
 // Generate randomized image runner options
 geometrize::ImageRunnerOptions generateRandomOptions();
+// Helper function to write a PNG file
+bool writeImage(const geometrize::Bitmap& bitmap, const std::string& filePath);
 
 }
 
 int main(int /*argc*/, char /**argv[]*/)
 {
     for(auto& p : std::experimental::filesystem::directory_iterator("../geometrize-lib-fuzzing/input_data")) {
-        const geometrize::Bitmap bitmap{loadBitmap(std::experimental::filesystem::canonical(p.path()).string())};
+        const std::string filepath{std::experimental::filesystem::canonical(p.path()).string()};
+        const geometrize::Bitmap bitmap{loadBitmap(filepath)};
         if(bitmap.getWidth() == 0 || bitmap.getHeight() == 0 || bitmap.getDataRef().size() == 0) {
             assert(0 && "Loaded empty bitmap");
             return 2;
         }
 
-        const geometrize::ImageRunnerOptions options{generateRandomOptions()};
         const std::size_t totalSteps = []() {
             std::random_device rd;
-            std::uniform_int_distribution<std::size_t> dist{0, 300};
+            std::uniform_int_distribution<std::size_t> dist{100, 300};
             return static_cast<std::size_t>(dist(rd));
         }();
 
-        run(bitmap, options, totalSteps);
+        std::cout << "Geometrizing file: " << filepath << "\n"
+                  << "Step count: " << totalSteps << "\n";
+
+
+        auto removeExtension = [](const std::string& path) -> std::string {
+            std::size_t lastdot = path.find_last_of(".");
+            if (lastdot == std::string::npos) {
+                return path;
+            }
+            return path.substr(0, lastdot);
+        };
+        auto replaceString = [](std::string& subject, const std::string& search, const std::string& replace) -> std::string {
+            std::size_t pos = 0;
+            while((pos = subject.find(search, pos)) != std::string::npos) {
+                 subject.replace(pos, search.length(), replace);
+                 pos += replace.length();
+            }
+            return subject;
+        };
+
+        const geometrize::Bitmap result{run(bitmap, totalSteps)};
+        writeImage(result, replaceString(removeExtension(filepath) + "_result.png", "input_data", "output_data"));
     }
 
     return 0;
@@ -56,15 +79,25 @@ int main(int /*argc*/, char /**argv[]*/)
 
 namespace {
 
-void run(const geometrize::Bitmap bitmap, const geometrize::ImageRunnerOptions options, const std::size_t totalSteps)
+geometrize::Bitmap run(const geometrize::Bitmap bitmap, const std::size_t totalSteps)
 {
     geometrize::ImageRunner runner{bitmap};
     for(std::size_t steps = 0; steps < totalSteps; steps++) {
+        const geometrize::ImageRunnerOptions options{generateRandomOptions()};
         const std::vector<geometrize::ShapeResult> shapes{runner.step(options)};
         for(std::size_t i = 0; i < shapes.size(); i++) {
-            std::cout << "Added shape " << steps + i << ". Type: " << shapes[i].shape->getType() << ". Score: " << shapes[i].score << "\n";
+            const float score{shapes[i].score};
+            assert(score <= 1.0f);
+            std::cout << "Added shape " << steps + i << ". Type: " << shapes[i].shape->getType() << ". Score: " << score << "\n";
         }
+
+        std::cout << "Options were: Alpha: " << static_cast<std::int32_t>(options.alpha) << ", "
+                  << "Max mutations: " << options.maxShapeMutations << ", "
+                  << "Shape count: " << options.shapeCount << ", "
+                  << "Random seed: " << options.seed << ", "
+                  << "Max threads: " << options.maxThreads << "\n";
     }
+    return runner.getCurrent();
 }
 
 geometrize::Bitmap loadBitmap(const std::string& filePath) // Helper function to read an image file to RGBA8888 pixel data
@@ -116,6 +149,13 @@ geometrize::ImageRunnerOptions generateRandomOptions()
     }();
 
     return options;
+}
+
+bool writeImage(const geometrize::Bitmap& bitmap, const std::string& filePath)
+{
+    const char* path{filePath.c_str()};
+    const void* data{bitmap.getDataRef().data()};
+    return stbi_write_png(path, bitmap.getWidth(), bitmap.getHeight(), 4, data, bitmap.getWidth() * 4) != 0;
 }
 
 }
