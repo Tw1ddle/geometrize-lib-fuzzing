@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <iostream>
 #include <random>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -30,13 +31,18 @@ geometrize::Bitmap loadBitmap(const std::string& filePath);
 geometrize::ImageRunnerOptions generateRandomOptions();
 // Helper function to write a PNG file
 bool writeImage(const geometrize::Bitmap& bitmap, const std::string& filePath);
-// Runs the test program. Throws various exceptions to signal failure.
+// Runs the test program. Throws various exceptions to signal failures.
 void run();
 }
 
 int main(int /*argc*/, char /**argv[]*/)
 {
-    run();
+    try {
+        run();
+    } catch(const std::exception& e) {
+        std::cout << "Encountered fatal exception: " << e.what() << "\n";
+        return 1;
+    }
     return 0;
 }
 
@@ -48,8 +54,7 @@ void run()
         const std::string filepath{std::experimental::filesystem::canonical(p.path()).string()};
         const geometrize::Bitmap bitmap{loadBitmap(filepath)};
         if(bitmap.getWidth() == 0 || bitmap.getHeight() == 0 || bitmap.getDataRef().size() == 0) {
-            assert(0 && "Loaded empty bitmap");
-            return;
+            throw std::runtime_error("Loaded empty bitmap");
         }
 
         const std::size_t totalSteps = []() {
@@ -60,7 +65,6 @@ void run()
 
         std::cout << "Geometrizing file: " << filepath << "\n"
                   << "Step count: " << totalSteps << "\n";
-
 
         auto removeExtension = [](const std::string& path) -> std::string {
             std::size_t lastdot = path.find_last_of(".");
@@ -79,7 +83,11 @@ void run()
         };
 
         const geometrize::Bitmap result{geometrizeImage(bitmap, totalSteps)};
-        writeImage(result, replaceString(removeExtension(filepath) + "_result.png", "input_data", "output_data"));
+
+        const std::string destinationPath{replaceString(removeExtension(filepath) + "_result.png", "input_data", "output_data")};
+        if(!writeImage(result, destinationPath)) {
+            throw std::runtime_error("Failed to write image to: " + destinationPath);
+        }
     }
 }
 
@@ -88,19 +96,22 @@ geometrize::Bitmap geometrizeImage(const geometrize::Bitmap bitmap, const std::s
     geometrize::ImageRunner runner{bitmap};
     for(std::size_t steps = 0; steps < totalSteps; steps++) {
         const geometrize::ImageRunnerOptions options{generateRandomOptions()};
-        const std::vector<geometrize::ShapeResult> shapes{runner.step(options)};
-        for(std::size_t i = 0; i < shapes.size(); i++) {
-            const float score{shapes[i].score};
-            assert(score <= 1.0f);
-            std::cout << "Added shape " << steps + i << ". Type: " << shapes[i].shape->getType() << ". Score: " << score << "\n";
-        }
-
-        std::cout << "Options were: Alpha: " << static_cast<std::int32_t>(options.alpha) << ", "
+        std::cout << "Options are: Alpha: " << static_cast<std::int32_t>(options.alpha) << ", "
                   << "Max shapes: " << options.shapeCount << ", "
                   << "Max mutations: " << options.maxShapeMutations << ", "
                   << "Shape count: " << options.shapeCount << ", "
                   << "Random seed: " << options.seed << ", "
                   << "Max threads: " << options.maxThreads << "\n";
+
+        const std::vector<geometrize::ShapeResult> shapes{runner.step(options)};
+
+        for(std::size_t i = 0; i < shapes.size(); i++) {
+            const float score{shapes[i].score};
+            std::cout << "Added shape " << steps + i << ". Type: " << shapes[i].shape->getType() << ". Score: " << score << "\n";
+            if(score > 1.0f) {
+                throw std::runtime_error("Shape has invalid score: " + std::to_string(score));
+            }
+        }
     }
     return runner.getCurrent();
 }
@@ -113,6 +124,7 @@ geometrize::Bitmap loadBitmap(const std::string& filePath) // Helper function to
     std::int32_t n = 0;
     std::uint8_t* dataPtr{stbi_load(path, &w, &h, &n, 4)};
     if(dataPtr == nullptr) {
+        throw std::runtime_error("Failed to load image: " + filePath);
         return geometrize::Bitmap(0, 0, geometrize::rgba{0, 0, 0, 0});
     }
     const std::vector<std::uint8_t> data{dataPtr, dataPtr + (w * h * 4)};
