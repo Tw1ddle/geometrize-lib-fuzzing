@@ -35,10 +35,3 @@ before_build:
 build_script:
   - cd %APPVEYOR_BUILD_FOLDER%
   - '%make%'
-
-# Run the fuzzing executable
-test_script:
-  -
-
-# Save the fuzzing results
-# TODO
