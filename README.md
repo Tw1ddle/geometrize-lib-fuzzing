@@ -11,7 +11,9 @@ This is a [fuzzing](https://en.wikipedia.org/wiki/Fuzzing) test program for the 
 
 ## Usage
 
-Coming soon.
+Build and run the project. Progress is reported in the console, the test program will throw an error if something bad happens.
+
+Currently, the program simply takes images from the input folder, geometrizes them using random settings, and saves the results to the output folder. It also merges input images together to create new test cases.
 
 ## Notes
  * Got an idea or suggestion? Open an issue on GitHub, or send Sam a message on [Twitter](https://twitter.com/Sam_Twidale).

@@ -23,9 +23,9 @@ const std::string inputDataDirectory{"../geometrize-lib-fuzzing/input_data"};
 
 // Runs the test program. Throws various exceptions to signal failures
 void run();
-// Loads up all the test image, geometrizes it for the given shape tpyes using random settings, and saves the results
+// Loads a test image, geometrizes it for the given shape types using otherwise random settings, and saves the result
 void loadGeometrizeAndSaveForTypes(const std::string& filepath, const geometrize::ShapeTypes types);
-// Loads up two test images, merges them randomly, geometrizes it using random settings, and saves the results
+// Loads two test images, merges the images together, and geometrizes the image using random settings, and saves the result
 void mergeGeometrizeAndSave(const std::string& firstFilepath, const std::string& secondFilepath, std::size_t id);
 
 // Geometrizes a bitmap using the given number of steps and shape types, returns the resulting geometrized bitmap
@@ -68,12 +68,12 @@ void run()
         for(geometrize::ShapeTypes shape : geometrize::allShapes) {
             loadGeometrizeAndSaveForTypes(filepath, shape);
         }
-        loadGeometrizeAndSaveForTypes(filepath, static_cast<geometrize::ShapeTypes>(0)); // Random shapes per-step
+        loadGeometrizeAndSaveForTypes(filepath, static_cast<geometrize::ShapeTypes>(0)); // Use random shape types on each step
     }
 
-    const std::size_t mergeCount{100};
+    const std::size_t mergeTests{100};
     std::random_device rd;
-    for(std::size_t i = 0; i < mergeCount; i++) {
+    for(std::size_t i = 0; i < mergeTests; i++) {
         std::uniform_int_distribution<std::size_t> dist{0, filepaths.size() - 1};
         mergeGeometrizeAndSave(filepaths[dist(rd)], filepaths[dist(rd)], i);
     }
