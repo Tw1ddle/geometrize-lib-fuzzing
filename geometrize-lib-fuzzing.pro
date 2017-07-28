@@ -1,9 +1,9 @@
 TEMPLATE = app
-CONFIG += console c++14 warn_on
+CONFIG += console warn_on
 CONFIG -= app_bundle
 CONFIG -= qt
 
-CONFIG += c++14
+QMAKE_CXXFLAGS += -std=c++1y
 
 include($$PWD/lib/geometrize/geometrize/geometrize.pri)
 
