@@ -2,6 +2,3 @@
 [submodule "lib/geometrize"]
 	path = lib/geometrize
 	url = https://github.com/Tw1ddle/geometrize-lib
-[submodule "lib/stb"]
-	path = lib/stb
-	url = https://github.com/nothings/stb

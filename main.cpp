@@ -6,12 +6,8 @@
 #include <string>
 #include <vector>
 
-#include <experimental/filesystem>
-
-#define STB_IMAGE_IMPLEMENTATION
-#include "lib/stb/stb_image.h"
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "lib/stb/stb_image_write.h"
+#include <QDirIterator>
+#include <QImage>
 
 #include "geometrize/shaperesult.h"
 #include "geometrize/bitmap/bitmap.h"
@@ -186,19 +182,15 @@ geometrize::Bitmap geometrizeImage(const geometrize::Bitmap bitmap, const std::s
 
 geometrize::Bitmap loadBitmap(const std::string& filePath) // Helper function to read an image file to RGBA8888 pixel data
 {
-    const char* path{filePath.c_str()};
-    std::int32_t w = 0;
-    std::int32_t h = 0;
-    std::int32_t n = 0;
-    std::uint8_t* dataPtr{stbi_load(path, &w, &h, &n, 4)};
-    if(dataPtr == nullptr) {
+    QImage image(QString::fromStdString(filePath));
+    if(image.isNull()) {
         throw std::runtime_error("Failed to load image: " + filePath);
-        return geometrize::Bitmap(0, 0, geometrize::rgba{0, 0, 0, 0});
     }
-    const std::vector<std::uint8_t> data{dataPtr, dataPtr + (w * h * 4)};
-    delete dataPtr;
+    image = image.convertToFormat(QImage::Format_RGBA8888);
 
-    const geometrize::Bitmap bitmap(w, h, data);
+    const std::vector<uchar> data(image.bits(), image.bits() + image.byteCount());
+    const geometrize::Bitmap bitmap(image.width(), image.height(), data);
+
     if(bitmap.getWidth() == 0 || bitmap.getHeight() == 0 || bitmap.getDataRef().size() == 0) {
         throw std::runtime_error("Loaded empty bitmap");
     }
@@ -242,16 +234,21 @@ geometrize::ImageRunnerOptions generateRandomOptions()
 
 bool writeImage(const geometrize::Bitmap& bitmap, const std::string& filePath)
 {
-    const char* path{filePath.c_str()};
-    const void* data{bitmap.getDataRef().data()};
-    return stbi_write_png(path, bitmap.getWidth(), bitmap.getHeight(), 4, data, bitmap.getWidth() * 4) != 0;
+    if(bitmap.getWidth() == 0 || bitmap.getHeight() == 0) {
+        throw std::runtime_error("Bad bitmap data");
+    }
+
+    QImage image(bitmap.getDataRef().data(), bitmap.getWidth(), bitmap.getHeight(), QImage::Format_RGBA8888);
+
+    return image.save(QString::fromStdString(filePath));
 }
 
 std::vector<std::string> filepathsForDirectory(const std::string& directory)
 {
     std::vector<std::string> filepaths;
-    for(auto& p : std::experimental::filesystem::directory_iterator(directory)) {
-        filepaths.push_back(std::experimental::filesystem::canonical(p.path()).string());
+    QDirIterator it(QString::fromStdString(directory), QDir::Files);
+    while(it.hasNext()) {
+        filepaths.push_back(it.next().toStdString());
     }
     return filepaths;
 }
