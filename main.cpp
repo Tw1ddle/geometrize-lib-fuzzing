@@ -72,7 +72,7 @@ void run()
         for(geometrize::ShapeTypes shape : geometrize::allShapes) {
             loadGeometrizeAndSaveForTypes(filepath, shape);
         }
-        loadGeometrizeAndSaveForTypes(filepath, 0); // Random shapes per-step
+        loadGeometrizeAndSaveForTypes(filepath, static_cast<geometrize::ShapeTypes>(0)); // Random shapes per-step
     }
 
     const std::size_t mergeCount{100};
@@ -144,7 +144,7 @@ void mergeGeometrizeAndSave(const std::string& firstFilepath, const std::string&
     std::cout << "Geometrizing merged files: " << firstFilepath << " and " << secondFilepath << "\n"
               << "Step count: " << totalSteps << "\n";
 
-    const geometrize::Bitmap result{geometrizeImage(mergedBitmap, totalSteps, 0)};
+    const geometrize::Bitmap result{geometrizeImage(mergedBitmap, totalSteps, static_cast<geometrize::ShapeTypes>(0))};
 
     std::string trimmedPath{removeExtension(firstFilepath)};
     trimmedPath.append("_merged_result_" + std::to_string(id) + ".png");
