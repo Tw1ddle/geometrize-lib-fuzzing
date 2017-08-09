@@ -1,11 +1,10 @@
 # Define the compilers versions we wish to build the fuzzing tests against
 environment:
   matrix:
-    # Project uses <filesystem> so won't work here
-    #- QTDIR: C:\Qt\5.6\mingw49_32
-    #  MINGW: C:\Qt\Tools\mingw49_32
-    #- QTDIR: C:\Qt\5.9\mingw53_32
-    #  MINGW: C:\Qt\Tools\mingw53_32
+    - QTDIR: C:\Qt\5.6\mingw49_32
+    - MINGW: C:\Qt\Tools\mingw49_32
+    - QTDIR: C:\Qt\5.9\mingw53_32
+    - MINGW: C:\Qt\Tools\mingw53_32
     - QTDIR: C:\Qt\5.7\msvc2015
     - QTDIR: C:\Qt\5.7\msvc2015_64
 
