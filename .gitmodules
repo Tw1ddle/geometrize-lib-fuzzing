@@ -1,4 +1,4 @@
 
-[submodule "lib/geometrize"]
-	path = lib/geometrize
+[submodule "geometrize-lib"]
+	path = geometrize-lib
 	url = https://github.com/Tw1ddle/geometrize-lib

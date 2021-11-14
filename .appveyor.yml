@@ -1,34 +1,172 @@
-image: Visual Studio 2019
+branches:
+  only:
+    - master
 
-# Define the compiler versions we wish to build the fuzzing tests against
+# Note that builds run in the order the images are declared
+image:
+  - Ubuntu2004
+  - macos-bigsur
+  - Visual Studio 2019
+  
+# Define the build configurations
 environment:
+  GITHUB_API_KEY:
+    secure: w1zaTUARBAuhkAKUke5sBvSkVtlDGL8YfQxROzv5oGIynVJImn+KWGFVDxyjQore
+
   matrix:
-    - QTDIR: C:\Qt\6.2.0\mingw81_64
+    - BUILD_NAME: gcc_linux
+    - BUILD_NAME: clang_osx
+    - BUILD_NAME: mingw_windows
+      QTDIR: C:\Qt\6.2\mingw81_64
       MINGW: C:\Qt\Tools\mingw810_64
-    - QTDIR: C:\Qt\6.2.0\msvc2019_64
+    - BUILD_NAME: msvc_windows
+      QTDIR: C:\Qt\6.2\msvc2019_64
+
+# Exclude invalid build configurations
+matrix:
+  exclude:
+    - image: Ubuntu2004
+      BUILD_NAME: mingw_windows
+    - image: Ubuntu2004
+      BUILD_NAME: msvc_windows
+    - image: Ubuntu2004
+      BUILD_NAME: clang_osx
+
+    - image: macos-bigsur
+      BUILD_NAME: mingw_windows
+    - image: macos-bigsur
+      BUILD_NAME: msvc_windows
+    - image: macos-bigsur
+      BUILD_NAME: gcc_linux
+
+    - image: Visual Studio 2019
+      BUILD_NAME: clang_osx
+    - image: Visual Studio 2019
+      BUILD_NAME: gcc_linux
 
 configuration:
   - debug
   - release
 
-# Get the project submodules
-# Set the environment variables and paths to make
-install:
-  - git submodule update --init --recursive
-  - set PATH=%PATH%;%QTDIR%\bin;%MINGW%\bin
-  - call "%QTDIR%\bin\qtenv2.bat"
-  - if %QTDIR:msvc=%==%QTDIR% set make=mingw32-make.exe
-  - if %QTDIR:_64=%==%QTDIR% ( set ARCH=x86 ) else set ARCH=x64
-  - if not %QTDIR:msvc2019=%==%QTDIR% call "%ProgramFiles(x86)%\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat" %ARCH%
-  - if not %QTDIR:msvc=%==%QTDIR% set make=nmake.exe
-  - if not %QTDIR:msvc=%==%QTDIR% %make% /? > nul
+# Do configuration-specific build steps
+for:
 
-# Run qmake
-before_build:
-  - cd %APPVEYOR_BUILD_FOLDER%
-  - qmake CONFIG+=%CONFIGURATION% -Wall geometrize-lib-fuzzing.pro
+  # Linux GCC
+  - matrix:
+      only:
+        - image: Ubuntu2004
+          BUILD_NAME: gcc_linux
 
-# Build the project
-build_script:
-  - cd %APPVEYOR_BUILD_FOLDER%
-  - '%make%'
+    install:
+      # Configure CI bot git email/username
+      - git config --global user.name "AppVeyor CI Bot"
+      - git config --global user.email "appveyor@appveyor.org"
+
+      - git submodule update --init --recursive
+      - git submodule update --remote --merge
+
+      # Push the latest versions of the submodules to the repository - note that these Linux builds run first, so other build platforms don't do this step
+      - |
+        if [[ `git status --porcelain` ]]; then
+          git checkout master
+          git add geometrize-lib
+          git commit --message "Build bot updating submodule"
+          git remote rm origin
+          git remote add origin https://${GITHUB_API_KEY}@github.com/Tw1ddle/geometrize-lib-fuzzing.git > /dev/null 2>&1
+          git push origin master
+        fi
+
+      - sudo apt update -qq --yes --force-yes
+      - sudo apt install libgl1-mesa-dev --yes --force-yes # Needed to avoid -lGL linker error
+
+      - export PATH=$HOME/Qt/6.1/gcc_64/bin:$PATH
+
+
+    before_build:
+      # Debug prints
+      - cd $HOME/Qt
+      - ls -a
+
+      - cd $APPVEYOR_BUILD_FOLDER
+      - qmake geometrize-lib-fuzzing.pro
+
+    build_script:
+      - cd $APPVEYOR_BUILD_FOLDER
+      - make
+
+
+
+  # Clang OSX
+  - matrix:
+      only:
+        - image: macos-bigsur
+          BUILD_NAME: clang_osx
+
+    install:
+      - git submodule update --init --recursive
+      - export PATH=$HOME/Qt/6.1/macos/bin:$PATH
+
+    before_build:
+      # Debug prints
+      - cd $HOME/Qt
+      - ls -a
+
+      - cd $APPVEYOR_BUILD_FOLDER     
+      - qmake geometrize-lib-fuzzing.pro
+
+    build_script:
+      - cd $APPVEYOR_BUILD_FOLDER
+      - make
+
+
+
+  # Windows MSVC
+  - matrix:
+      only:
+        - image: Visual Studio 2019
+          BUILD_NAME: msvc_windows
+
+    install:
+      - git submodule update --init --recursive
+      - set PATH=%PATH%;%QTDIR%\bin
+      - call "%QTDIR%\bin\qtenv2.bat"
+      - call "%ProgramFiles(x86)%\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat" x64
+      - set make=nmake.exe
+
+    before_build:
+      # Debug prints
+      - cd %QTDIR%
+      - ls -a
+
+      - cd %APPVEYOR_BUILD_FOLDER%
+      - qmake geometrize-lib-fuzzing.pro
+
+    build_script:
+      - cd %APPVEYOR_BUILD_FOLDER%
+      - '%make%'
+
+
+
+  # Windows Mingw
+  - matrix:
+      only:
+        - image: Visual Studio 2019
+          BUILD_NAME: mingw_windows
+
+    install:
+      - git submodule update --init --recursive
+      - set PATH=%PATH%;%QTDIR%\bin;%MINGW%\bin
+      - call "%QTDIR%\bin\qtenv2.bat"
+      - set make=mingw32-make.exe
+
+    before_build:
+      # Debug prints
+      - cd %QTDIR%
+      - ls -a
+    
+      - cd %APPVEYOR_BUILD_FOLDER%
+      - qmake geometrize-lib-fuzzing.pro
+
+    build_script:
+      - cd %APPVEYOR_BUILD_FOLDER%
+      - '%make%'

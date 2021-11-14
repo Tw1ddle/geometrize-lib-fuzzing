@@ -170,7 +170,7 @@ geometrize::Bitmap geometrizeImage(const geometrize::Bitmap bitmap, const std::s
         const std::vector<geometrize::ShapeResult> shapes{runner.step(options)};
 
         for(std::size_t i = 0; i < shapes.size(); i++) {
-            const float score{shapes[i].score};
+            const double score{shapes[i].score};
             std::cout << "Added shape " << steps + i << ". Type: " << shapes[i].shape->getType() << ". Score: " << score << "\n";
             if(score < 0.0f || score > 1.0f) {
                 throw std::runtime_error("Shape has invalid score: " + std::to_string(score));
@@ -188,7 +188,7 @@ geometrize::Bitmap loadBitmap(const std::string& filePath) // Helper function to
     }
     image = image.convertToFormat(QImage::Format_RGBA8888);
 
-    const std::vector<uchar> data(image.bits(), image.bits() + image.byteCount());
+    const std::vector<uchar> data(image.bits(), image.bits() + image.sizeInBytes());
     const geometrize::Bitmap bitmap(image.width(), image.height(), data);
 
     if(bitmap.getWidth() == 0 || bitmap.getHeight() == 0 || bitmap.getDataRef().size() == 0) {

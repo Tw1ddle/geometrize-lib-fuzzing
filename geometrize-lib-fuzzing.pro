@@ -2,8 +2,8 @@ TEMPLATE = app
 CONFIG += console warn_on
 CONFIG += core
 
-QMAKE_CXXFLAGS += -std=c++1y
+CONFIG += std=c++17
 
-include($$PWD/lib/geometrize/geometrize/geometrize.pri)
+include($$PWD/geometrize-lib/geometrize/geometrize.pri)
 
 SOURCES += main.cpp
