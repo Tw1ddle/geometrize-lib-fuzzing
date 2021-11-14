@@ -1,5 +1,6 @@
 #include <cassert>
 #include <cstdint>
+#include <filesystem>
 #include <iostream>
 #include <random>
 #include <stdexcept>
@@ -19,29 +20,32 @@
 
 namespace {
 
-const std::string inputDataDirectory{"../geometrize-lib-fuzzing/input_data"};
+const std::filesystem::path inputDataDirectory{"../geometrize-lib-fuzzing/input_data"};
+const std::filesystem::path outputDataDirectory{"../geometrize-lib-fuzzing/output_data"};
 
 // Runs the test program. Throws various exceptions to signal failures
 void run();
+// Creates the input/output directories for the tests
+void createInputOutputDirectories();
 // Loads a test image, geometrizes it for the given shape types using otherwise random settings, and saves the result
-void loadGeometrizeAndSaveForTypes(const std::string& filepath, const geometrize::ShapeTypes types);
+void loadGeometrizeAndSaveForTypes(const std::filesystem::path& filepath, const geometrize::ShapeTypes types);
 // Loads two test images, merges the images together, and geometrizes the image using random settings, and saves the result
-void mergeGeometrizeAndSave(const std::string& firstFilepath, const std::string& secondFilepath, std::size_t id);
+void mergeGeometrizeAndSave(const std::filesystem::path& firstFilepath, const std::filesystem::path& secondFilepath, std::size_t id);
 
 // Geometrizes a bitmap using the given number of steps and shape types, returns the resulting geometrized bitmap
 geometrize::Bitmap geometrizeImage(const geometrize::Bitmap bitmap, const std::size_t totalSteps, const geometrize::ShapeTypes shapeTypesOverride);
 // Load a Windows bitmap (bmp) from a file
-geometrize::Bitmap loadBitmap(const std::string& filePath);
+geometrize::Bitmap loadBitmap(const std::filesystem::path& filePath);
 // Generate randomized image runner options
 geometrize::ImageRunnerOptions generateRandomOptions();
 // Helper function to write a PNG file
-bool writeImage(const geometrize::Bitmap& bitmap, const std::string& filePath);
+bool writeImage(const geometrize::Bitmap& bitmap, const std::filesystem::path& filePath);
 // Gets the file paths for all files in the given directory
-std::vector<std::string> filepathsForDirectory(const std::string& directory);
+std::vector<std::filesystem::path> filepathsForDirectory(const std::filesystem::path& directory);
 // Removes all characters after the last "." in the given path, returning the string without the extension
-std::string removeExtension(const std::string& path);
+std::filesystem::path removeExtension(const std::filesystem::path& path);
 // Searches for the search string in the given string, replacing any instances with the replace string
-std::string replaceString(std::string& subject, const std::string& search, const std::string& replace);
+std::string replaceString(std::string subject, const std::string& search, const std::string& replace);
 // Gets the names of the given shape types
 std::string getNamesForShapeTypes(geometrize::ShapeTypes types);
 
@@ -54,7 +58,11 @@ int main(int /*argc*/, char** /*argv*/)
     } catch(const std::exception& e) {
         std::cout << "Encountered fatal exception: " << e.what() << "\n";
         return 1;
+    } catch(...) {
+        std::cout << "Encountered unknown/unhandled exception\n";
+        return 2;
     }
+
     return 0;
 }
 
@@ -62,9 +70,11 @@ namespace {
 
 void run()
 {
-    const std::vector<std::string> filepaths{filepathsForDirectory(inputDataDirectory)};
+    createInputOutputDirectories();
 
-    for(const std::string& filepath : filepaths) {
+    const std::vector<std::filesystem::path> filepaths{filepathsForDirectory(inputDataDirectory)};
+
+    for(const std::filesystem::path& filepath : filepaths) {
         for(geometrize::ShapeTypes shape : geometrize::allShapes) {
             loadGeometrizeAndSaveForTypes(filepath, shape);
         }
@@ -79,7 +89,13 @@ void run()
     }
 }
 
-void loadGeometrizeAndSaveForTypes(const std::string& filepath, const geometrize::ShapeTypes types)
+void createInputOutputDirectories()
+{
+    std::filesystem::create_directories(std::filesystem::absolute(inputDataDirectory));
+    std::filesystem::create_directories(std::filesystem::absolute(outputDataDirectory));
+}
+
+void loadGeometrizeAndSaveForTypes(const std::filesystem::path& filepath, const geometrize::ShapeTypes types)
 {
     const geometrize::Bitmap bitmap{loadBitmap(filepath)};
 
@@ -94,7 +110,7 @@ void loadGeometrizeAndSaveForTypes(const std::string& filepath, const geometrize
 
     const geometrize::Bitmap result{geometrizeImage(bitmap, totalSteps, types)};
 
-    std::string trimmedPath{removeExtension(filepath)};
+    std::string trimmedPath(removeExtension(filepath).string());
     trimmedPath.append("_result" + getNamesForShapeTypes(types) + ".png");
     const std::string destinationPath{replaceString(trimmedPath, "input_data", "output_data")};
     if(!writeImage(result, destinationPath)) {
@@ -102,7 +118,7 @@ void loadGeometrizeAndSaveForTypes(const std::string& filepath, const geometrize
     }
 }
 
-void mergeGeometrizeAndSave(const std::string& firstFilepath, const std::string& secondFilepath, const std::size_t id)
+void mergeGeometrizeAndSave(const std::filesystem::path& firstFilepath, const std::filesystem::path& secondFilepath, const std::size_t id)
 {
     const geometrize::Bitmap firstBitmap{loadBitmap(firstFilepath)};
     const geometrize::Bitmap secondBitmap{loadBitmap(secondFilepath)};
@@ -137,16 +153,16 @@ void mergeGeometrizeAndSave(const std::string& firstFilepath, const std::string&
         return static_cast<std::size_t>(dist(rd));
     }();
 
-    std::cout << "Geometrizing merged files: " << firstFilepath << " and " << secondFilepath << "\n"
+    std::cout << "Geometrizing merged files: " << firstFilepath.string() << " and " << secondFilepath << "\n"
               << "Step count: " << totalSteps << "\n";
 
     const geometrize::Bitmap result{geometrizeImage(mergedBitmap, totalSteps, static_cast<geometrize::ShapeTypes>(0))};
 
-    std::string trimmedPath{removeExtension(firstFilepath)};
+    std::filesystem::path trimmedPath{removeExtension(firstFilepath)};
     trimmedPath.append("_merged_result_" + std::to_string(id) + ".png");
-    const std::string destinationPath{replaceString(trimmedPath, "input_data", "output_data")};
+    const std::filesystem::path destinationPath{std::filesystem::path(replaceString(trimmedPath.string(), "input_data", "output_data"))};
     if(!writeImage(result, destinationPath)) {
-        throw std::runtime_error("Failed to write image to: " + destinationPath);
+        throw std::runtime_error("Failed to write image to: " + destinationPath.string());
     }
 }
 
@@ -180,11 +196,11 @@ geometrize::Bitmap geometrizeImage(const geometrize::Bitmap bitmap, const std::s
     return runner.getCurrent();
 }
 
-geometrize::Bitmap loadBitmap(const std::string& filePath) // Helper function to read an image file to RGBA8888 pixel data
+geometrize::Bitmap loadBitmap(const std::filesystem::path& filePath) // Helper function to read an image file to RGBA8888 pixel data
 {
-    QImage image(QString::fromStdString(filePath));
+    QImage image(QString::fromStdString(filePath.string()));
     if(image.isNull()) {
-        throw std::runtime_error("Failed to load image: " + filePath);
+        throw std::runtime_error("Failed to load image: " + filePath.string());
     }
     image = image.convertToFormat(QImage::Format_RGBA8888);
 
@@ -232,7 +248,7 @@ geometrize::ImageRunnerOptions generateRandomOptions()
     return options;
 }
 
-bool writeImage(const geometrize::Bitmap& bitmap, const std::string& filePath)
+bool writeImage(const geometrize::Bitmap& bitmap, const std::filesystem::path& filePath)
 {
     if(bitmap.getWidth() == 0 || bitmap.getHeight() == 0) {
         throw std::runtime_error("Bad bitmap data");
@@ -240,29 +256,25 @@ bool writeImage(const geometrize::Bitmap& bitmap, const std::string& filePath)
 
     QImage image(bitmap.getDataRef().data(), bitmap.getWidth(), bitmap.getHeight(), QImage::Format_RGBA8888);
 
-    return image.save(QString::fromStdString(filePath));
+    return image.save(QString::fromStdString(filePath.string()));
 }
 
-std::vector<std::string> filepathsForDirectory(const std::string& directory)
+std::vector<std::filesystem::path> filepathsForDirectory(const std::filesystem::path& directory)
 {
-    std::vector<std::string> filepaths;
-    QDirIterator it(QString::fromStdString(directory), QDir::Files);
+    std::vector<std::filesystem::path> filepaths;
+    QDirIterator it(QString::fromStdString(directory.string()), QDir::Files);
     while(it.hasNext()) {
         filepaths.push_back(it.next().toStdString());
     }
     return filepaths;
 }
 
-std::string removeExtension(const std::string& path)
+std::filesystem::path removeExtension(const std::filesystem::path& path)
 {
-    std::size_t lastdot = path.find_last_of(".");
-    if (lastdot == std::string::npos) {
-        return path;
-    }
-    return path.substr(0, lastdot);
+    return path.stem();
 }
 
-std::string replaceString(std::string& subject, const std::string& search, const std::string& replace)
+std::string replaceString(std::string subject, const std::string& search, const std::string& replace)
 {
     std::size_t pos = 0;
     while((pos = subject.find(search, pos)) != std::string::npos) {
