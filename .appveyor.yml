@@ -16,9 +16,10 @@ environment:
   matrix:
     - BUILD_NAME: gcc_linux
     - BUILD_NAME: clang_osx
-    - BUILD_NAME: mingw_windows
-      QTDIR: C:\Qt\6.2\mingw81_64
-      MINGW: C:\Qt\Tools\mingw810_64
+    # Disabled due to std::filesystem::path compilation issue: https://stackoverflow.com/questions/50546025/mingw-w64-8-1-0-rev-0-doesnt-compile-when-including-filesystem
+    #- BUILD_NAME: mingw_windows
+    #  QTDIR: C:\Qt\6.2\mingw81_64
+    #  MINGW: C:\Qt\Tools\mingw810_64
     - BUILD_NAME: msvc_windows
       QTDIR: C:\Qt\6.2\msvc2019_64
 

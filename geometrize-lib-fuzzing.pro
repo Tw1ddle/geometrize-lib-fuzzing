@@ -4,6 +4,8 @@ CONFIG += core
 
 QMAKE_CXXFLAGS += -std=c++1y
 
+QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.15 # For std::filesystem support
+
 include($$PWD/geometrize-lib/geometrize/geometrize.pri)
 
 SOURCES += main.cpp
