@@ -1,7 +1,7 @@
 [![Geometrize fuzzing logo](https://github.com/Tw1ddle/geometrize-lib-fuzzing/blob/master/screenshots/logo.png?raw=true "Geometrize - library for geometrizing images into geometric primitives fuzzing logo")](http://www.geometrize.co.uk)
 
 [![License](http://img.shields.io/:license-mit-blue.svg?style=flat-square)](https://github.com/Tw1ddle/geometrize-lib-fuzzing/blob/master/LICENSE)
-[![AppVeyor Fuzzing Build Status](https://ci.appveyor.com/api/projects/status/ebc5hbfu0mtofdom?svg=true)](https://ci.appveyor.com/project/Tw1ddle/geometrize-lib-fuzzing)
+[![Build Status Badge](https://ci.appveyor.com/api/projects/status/github/Tw1ddle/geometrize-lib-fuzzing)](https://ci.appveyor.com/project/Tw1ddle/geometrize-lib-fuzzing)
 
 This is a [fuzzing](https://en.wikipedia.org/wiki/Fuzzing) test program for the [Geometrize](https://github.com/Tw1ddle/geometrize-lib) library, a tool for geometrizing images into geometric primitives.
 
